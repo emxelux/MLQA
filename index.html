@@ -33,6 +33,7 @@
     const input = document.getElementById('user-input');
     const sendBtn = document.getElementById('send-btn');
 
+    // Function to add chat bubbles
     function addMessage(message, sender='bot') {
         const bubble = document.createElement('div');
         bubble.textContent = message;
@@ -50,11 +51,22 @@
         chatBox.scrollTop = chatBox.scrollHeight;
     }
 
+    // Recursive function to extract text from backend response
+    function extractAnswer(resp) {
+        if (!resp) return "";
+        if (typeof resp === "string") return resp;
+        if (Array.isArray(resp)) return resp.map(extractAnswer).join("\n\n");
+        if (resp.answer) return extractAnswer(resp.answer);
+        if (resp.content) return resp.content;
+        return JSON.stringify(resp);
+    }
+
+    // Function to send user question
     async function sendQuestion() {
         const question = input.value.trim();
         if (!question) return;
 
-        // Add user message
+        // Show user message
         addMessage(question, 'user');
         input.value = '';
 
@@ -72,21 +84,11 @@
 
             const data = await res.json();
 
-            // Handle array or object responses
-            let answerText = "";
-            if (Array.isArray(data.answer)) {
-                answerText = data.answer.map(item => {
-                    if (typeof item === "string") return item;
-                    if (item.content) return item.content;
-                    return JSON.stringify(item);
-                }).join("\n\n");
-            } else if (typeof data.answer === "object") {
-                answerText = data.answer.content || JSON.stringify(data.answer);
-            } else {
-                answerText = data.answer;
-            }
+            // Extract text robustly
+            const answerText = extractAnswer(data);
 
-            addMessage(answerText, 'bot');
+            // Show bot message
+            addMessage(answerText || "I couldn't get a response.", 'bot');
 
         } catch (err) {
             console.error(err);
@@ -94,6 +96,7 @@
         }
     }
 
+    // Event listeners
     sendBtn.addEventListener('click', sendQuestion);
     input.addEventListener('keypress', e => { if (e.key === 'Enter') sendQuestion(); });
 </script>
