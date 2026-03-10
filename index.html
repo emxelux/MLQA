@@ -29,61 +29,73 @@
     </div>
 
     <script>
-        const chatBox = document.getElementById('chat-box');
-        const input = document.getElementById('user-input');
-        const sendBtn = document.getElementById('send-btn');
+    const chatBox = document.getElementById('chat-box');
+    const input = document.getElementById('user-input');
+    const sendBtn = document.getElementById('send-btn');
 
-        function addMessage(message, sender='bot') {
-            const bubble = document.createElement('div');
-            bubble.textContent = message;
-            bubble.style.maxWidth = '75%';
-            bubble.style.padding = '10px 15px';
-            bubble.style.borderRadius = '10px';
-            bubble.style.wordWrap = 'break-word';
-            bubble.style.alignSelf = sender === 'user' ? 'flex-end' : 'flex-start';
-            bubble.style.backgroundColor = sender === 'user' ? '#4f46e5' : '#323248';
-            bubble.style.color = sender === 'user' ? 'white' : '#c5c5c5';
-            bubble.style.fontFamily = "'Courier New', monospace";
-            bubble.style.fontSize = '14px';
-            bubble.style.transition = 'all 0.2s';
-            chatBox.appendChild(bubble);
-            chatBox.scrollTop = chatBox.scrollHeight;
-        }
-
-        async function sendQuestion() {
-    const question = input.value.trim();
-    if (!question) return;
-
-    // Add user message
-    addMessage(question, 'user');
-    input.value = '';
-
-    try {
-        const res = await fetch('https://machinelearningchatbotapi.onrender.com/search', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ question })
-        });
-
-        if (!res.ok) {
-            // Handle HTTP errors
-            addMessage(`Backend error: ${res.status} ${res.statusText}`, 'bot');
-            return;
-        }
-
-        const data = await res.json();
-
-        // Add bot message
-        addMessage(data.answer || "I couldn't get a response.");
-    } catch (err) {
-        // Handle network / CORS errors
-        console.error(err);
-        addMessage("Error connecting to the backend.", 'bot');
+    function addMessage(message, sender='bot') {
+        const bubble = document.createElement('div');
+        bubble.textContent = message;
+        bubble.style.maxWidth = '75%';
+        bubble.style.padding = '10px 15px';
+        bubble.style.borderRadius = '10px';
+        bubble.style.wordWrap = 'break-word';
+        bubble.style.alignSelf = sender === 'user' ? 'flex-end' : 'flex-start';
+        bubble.style.backgroundColor = sender === 'user' ? '#4f46e5' : '#323248';
+        bubble.style.color = sender === 'user' ? 'white' : '#c5c5c5';
+        bubble.style.fontFamily = "'Courier New', monospace";
+        bubble.style.fontSize = '14px';
+        bubble.style.transition = 'all 0.2s';
+        chatBox.appendChild(bubble);
+        chatBox.scrollTop = chatBox.scrollHeight;
     }
-}
 
-        sendBtn.addEventListener('click', sendQuestion);
-        input.addEventListener('keypress', e => { if (e.key === 'Enter') sendQuestion(); });
-    </script>
+    async function sendQuestion() {
+        const question = input.value.trim();
+        if (!question) return;
+
+        // Add user message
+        addMessage(question, 'user');
+        input.value = '';
+
+        try {
+            const res = await fetch('https://machinelearningchatbotapi.onrender.com/search', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ question })
+            });
+
+            if (!res.ok) {
+                addMessage(`Backend error: ${res.status} ${res.statusText}`, 'bot');
+                return;
+            }
+
+            const data = await res.json();
+
+            // Handle array or object responses
+            let answerText = "";
+            if (Array.isArray(data.answer)) {
+                answerText = data.answer.map(item => {
+                    if (typeof item === "string") return item;
+                    if (item.content) return item.content;
+                    return JSON.stringify(item);
+                }).join("\n\n");
+            } else if (typeof data.answer === "object") {
+                answerText = data.answer.content || JSON.stringify(data.answer);
+            } else {
+                answerText = data.answer;
+            }
+
+            addMessage(answerText, 'bot');
+
+        } catch (err) {
+            console.error(err);
+            addMessage("Error connecting to the backend.", 'bot');
+        }
+    }
+
+    sendBtn.addEventListener('click', sendQuestion);
+    input.addEventListener('keypress', e => { if (e.key === 'Enter') sendQuestion(); });
+</script>
 </body>
 </html>
