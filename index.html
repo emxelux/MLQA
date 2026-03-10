@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>MLQA Chatbot</title>
+</head>
+<body style="margin:0; padding:0; font-family: 'Courier New', monospace; background-color:#1e1e2f; display:flex; justify-content:center; align-items:center; height:100vh; color:#c5c5c5;">
+
+    <div style="width: 450px; max-width: 90%; background-color:#2a2a3e; border-radius:12px; box-shadow:0 10px 25px rgba(0,0,0,0.5); display:flex; flex-direction:column; overflow:hidden;">
+
+        <!-- Header -->
+        <div style="background-color:#4f46e5; padding:15px; text-align:center; font-size:22px; font-weight:bold; color:white; letter-spacing:1px;">
+            🤖 MLQA Chatbot
+        </div>
+
+        <!-- Chat body -->
+        <div id="chat-box" style="flex:1; padding:15px; display:flex; flex-direction:column; gap:10px; overflow-y:auto; background-color:#1e1e2f;">
+            <div style="text-align:center; color:#888;">Ask me anything about Machine Learning...</div>
+        </div>
+
+        <!-- Input -->
+        <div style="padding:10px; border-top:1px solid #444; display:flex; gap:10px;">
+            <input type="text" id="user-input" placeholder="Type your question..." 
+                   style="flex:1; padding:10px; border:1px solid #555; border-radius:6px; background-color:#2a2a3e; color:white; font-family: 'Courier New', monospace;">
+            <button id="send-btn" style="padding:10px 15px; border:none; border-radius:6px; background-color:#4f46e5; color:white; font-weight:bold; cursor:pointer; transition:background 0.2s;">
+                Send
+            </button>
+        </div>
+    </div>
+
+    <script>
+        const chatBox = document.getElementById('chat-box');
+        const input = document.getElementById('user-input');
+        const sendBtn = document.getElementById('send-btn');
+
+        function addMessage(message, sender='bot') {
+            const bubble = document.createElement('div');
+            bubble.textContent = message;
+            bubble.style.maxWidth = '75%';
+            bubble.style.padding = '10px 15px';
+            bubble.style.borderRadius = '10px';
+            bubble.style.wordWrap = 'break-word';
+            bubble.style.alignSelf = sender === 'user' ? 'flex-end' : 'flex-start';
+            bubble.style.backgroundColor = sender === 'user' ? '#4f46e5' : '#323248';
+            bubble.style.color = sender === 'user' ? 'white' : '#c5c5c5';
+            bubble.style.fontFamily = "'Courier New', monospace";
+            bubble.style.fontSize = '14px';
+            bubble.style.transition = 'all 0.2s';
+            chatBox.appendChild(bubble);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        async function sendQuestion() {
+    const question = input.value.trim();
+    if (!question) return;
+
+    // Add user message
+    addMessage(question, 'user');
+    input.value = '';
+
+    try {
+        const res = await fetch('https://machinelearningchatbotapi.onrender.com/search', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ question })
+        });
+
+        if (!res.ok) {
+            // Handle HTTP errors
+            addMessage(`Backend error: ${res.status} ${res.statusText}`, 'bot');
+            return;
+        }
+
+        const data = await res.json();
+
+        // Add bot message
+        addMessage(data.answer || "I couldn't get a response.");
+    } catch (err) {
+        // Handle network / CORS errors
+        console.error(err);
+        addMessage("Error connecting to the backend.", 'bot');
+    }
+}
+
+        sendBtn.addEventListener('click', sendQuestion);
+        input.addEventListener('keypress', e => { if (e.key === 'Enter') sendQuestion(); });
+    </script>
+</body>
+</html>
